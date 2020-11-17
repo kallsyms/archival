@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
+import collections
 import glob
 import http.cookiejar
 import json
 import os
 import requests
+import string
 import time
 
 cookies = http.cookiejar.MozillaCookieJar('cookies.txt')
 cookies.load()
 
-UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36'
+UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36'
 
-def crawl_while(url, params, jkey, cb):
+def crawl(url, params, jkey):
     fail_count = 0
     startkey = 0
     last = False
@@ -37,8 +39,6 @@ def crawl_while(url, params, jkey, cb):
                 last = j['last']
 
                 for item in j[jkey]:
-                    if not cb(startkey, item):
-                        return
                     yield item
 
                 time.sleep(0.5)
@@ -47,8 +47,18 @@ def crawl_while(url, params, jkey, cb):
                 time.sleep(30)
 
 
-def crawl_all(url, params, jkey):
-    yield from crawl_while(url, params, jkey, lambda _, __: True)
+def get_tags():
+    # Old way of enumerating through /v1/hashtag with empty search doesn't work any more.
+    # Go through char by char
+    seen = set()
+    for char in string.ascii_lowercase:
+        print(f"Tag iter '{char}'")
+        for tag in crawl('https://api.parler.com/v1/hashtag', {'search': char}, 'tags'):
+            if 'k' not in tag['totalPosts']:  # count < 1000
+                break
+            if tag['tag'] not in seen:
+                yield tag
+                seen.add(tag['tag'])
 
 
 if __name__ == "__main__":
@@ -57,7 +67,8 @@ if __name__ == "__main__":
     except OSError:
         pass
 
-    most_recent_post_for_tag = {}
+    NOT_BEFORE = 20201101000000
+    most_recent_post_for_tag = collections.defaultdict(lambda: NOT_BEFORE)
 
     for tagf in glob.glob('tags/*.json'):
         tag = tagf.split('/')[1].split('.')[0]
@@ -70,17 +81,18 @@ if __name__ == "__main__":
     print(f"Loaded existing tag crawl times: {most_recent_post_for_tag}")
 
     while True:
-        for tag in crawl_all('https://api.parler.com/v1/hashtag', {'search': ''}, 'tags'):
+        for tag in get_tags():
             tag = tag['tag']
             print(f"Exploring #{tag}")
-            with open(f'tags/{tag}.json', 'a') as f:
-                if tag in most_recent_post_for_tag:
-                    newposts = crawl_while('https://api.parler.com/v1/post/hashtag', {'tag': tag, 'limit': 10}, 'posts', lambda _, thing: int(thing['createdAt']) > most_recent_post_for_tag[tag])
-                else:
-                    newposts = crawl_all('https://api.parler.com/v1/post/hashtag', {'tag': tag, 'limit': 10}, 'posts')
+            safetag = tag.replace('.','').replace('/','')
+            with open(f'tags/{safetag}.json', 'a') as f:
+                newposts_iter = crawl('https://api.parler.com/v1/post/hashtag', {'tag': tag, 'limit': 10}, 'posts')
 
                 first_post = None
-                for i, post in enumerate(newposts):
+                for i, post in enumerate(newposts_iter):
+                    if int(post['createdAt']) <= most_recent_post_for_tag[safetag]:
+                        break
+
                     if i % 100 == 0:
                         print(f"{tag}:{post['createdAt']}")
                     if not first_post:
@@ -88,6 +100,6 @@ if __name__ == "__main__":
                     f.write(json.dumps(post) + '\n')
 
                 if first_post:
-                    most_recent_post_for_tag[tag] = int(first_post['createdAt'])
+                    most_recent_post_for_tag[safetag] = int(first_post['createdAt'])
 
         time.sleep(60)
