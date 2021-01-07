@@ -30,36 +30,32 @@ if __name__ == "__main__":
     tags_collection = mongo.parler.tags
     posts_collection = mongo.parler.posts
 
-    NOT_BEFORE = 20201101000000
-    most_recent_time_for_tag = collections.defaultdict(lambda: NOT_BEFORE)
-
-    for tag_obj in tags_collection.find():
-        most_recent_time_for_tag[tag_obj['tag']] = tag_obj['mostRecentPost']
-
-    logging.info("Loaded existing tag crawl times: %s", most_recent_time_for_tag)
+    NOT_BEFORE = 20210101000000
 
     while True:
         for tag in get_tags():
+            most_recent = tag.get('mostRecentPost', NOT_BEFORE)
             tag = tag['tag']
+
             logging.info("Exploring %s", tag)
-            newposts_iter = crawl('https://api.parler.com/v1/post/hashtag', {'tag': tag, 'limit': 10}, 'posts')
+            posts = crawl('https://api.parler.com/v1/post/hashtag', {'tag': tag, 'limit': 10}, 'posts')
 
             first_post = None
-            for i, post in enumerate(newposts_iter):
-                if int(post['createdAt']) <= most_recent_time_for_tag[tag]:
+            for i, post in enumerate(posts):
+                if int(post['createdAt']) <= most_recent:
                     break
 
                 if i % 100 == 0:
                     logging.info("%s:%s", tag, post['createdAt'])
+
                 if not first_post:
                     first_post = post
 
                 post['_id'] = post['id']
-                posts_collection.update({'_id': post['_id']}, post, upsert=True)
+                posts_collection.replace_one({'_id': post['_id']}, post, upsert=True)
 
             if first_post:
                 ctime = int(first_post['createdAt'])
-                tags_collection.update({'tag': tag}, {'$set': {'mostRecentPost': ctime}}, upsert=True)
-                most_recent_time_for_tag[tag] = ctime
+                tags_collection.update_one({'tag': tag}, {'$set': {'mostRecentPost': ctime}}, upsert=True)
 
         time.sleep(60)

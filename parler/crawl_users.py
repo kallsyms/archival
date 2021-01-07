@@ -17,8 +17,10 @@ if __name__ == "__main__":
     for i, chars in enumerate(itertools.product(*([string.ascii_lowercase]*3))):
         prefix = ''.join(chars)
         logging.debug(prefix)
+
         if i % 100 == 0:
             logging.info(prefix)
+
         for user in crawl('https://api.parler.com/v1/users', {'search': prefix}, 'users'):
             user['_id'] = user['id']
-            users_collection.update({'_id': user['_id']}, user, upsert=True)
+            users_collection.replace_one({'_id': user['_id']}, user, upsert=True)
