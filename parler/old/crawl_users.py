@@ -3,6 +3,7 @@ import itertools
 import logging
 import pymongo
 import string
+import sys
 
 from parler import crawl
 
@@ -14,8 +15,15 @@ if __name__ == "__main__":
     mongo = pymongo.MongoClient("192.168.1.170", 27017)
     users_collection = mongo.parler.users
 
+    start = 'aaa'
+    if len(sys.argv) > 1:
+        start = sys.argv[1]
+
     for i, chars in enumerate(itertools.product(*([string.ascii_lowercase]*3))):
         prefix = ''.join(chars)
+        if prefix < start:
+            continue
+
         logging.debug(prefix)
 
         if i % 100 == 0:

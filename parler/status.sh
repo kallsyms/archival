@@ -1,9 +1,14 @@
 #!/bin/sh
+ct="45019604ef2d"
+
 echo "users"
-docker exec parler mongo parler --eval "db.users.count()" --quiet
+docker exec $ct mongo parler --eval "db.user.count()" --quiet
 
 echo "posts"
-docker exec parler mongo parler --eval "db.posts.count()" --quiet
+docker exec $ct mongo parler --eval "db.post.count()" --quiet
 
 echo "comments"
-docker exec parler mongo parler --eval "db.comments.count()" --quiet
+docker exec $ct mongo parler --eval "db.comment.count()" --quiet
+
+# echo "stats"
+# docker exec $ct mongo parler --eval "db.runCommand({dbStats: 1})" --quiet

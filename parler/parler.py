@@ -1,3 +1,4 @@
+from typing import Optional
 import logging
 import http.cookiejar
 import requests
@@ -12,6 +13,32 @@ UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chr
 logger = logging.getLogger('parler')
 
 
+def uuid_conv(typ: str, iid: int) -> Optional[str]:
+    """
+    https://github.com/d0nk/parler-tricks/blob/main/parler/conversion.py#L22
+    """
+    for i in range(5):
+        try:
+            resp = requests.get(f'https://api.parler.com/v3/uuidConversion/{typ}/{iid}', headers={'User-Agent': UA}, cookies=cookies)
+            if not resp.ok:
+                if resp.status_code == 404:
+                    logger.info("Bailing from %s %d - 404", typ, iid)
+                    return None
+
+                logger.info("Resp not ok: %s. Pausing for a bit...", resp)
+                time.sleep(3**i)
+                continue
+
+            return resp.text.strip()
+
+        except Exception:
+            logger.exception("Exception fetching. Pausing for a bit...")
+            time.sleep(30)
+
+    logger.warning("Bailing from uuid_conv of %s %d due to 5 errors in a row", typ, iid)
+    return None
+
+
 def get(url, params):
     for i in range(5):
         try:
@@ -20,6 +47,9 @@ def get(url, params):
                 # parler uses 400 to denote basically a 403
                 if resp.status_code == 400:
                     logger.info("Bailing from %s %s - got a 400", url, params)
+                    return
+                if resp.status_code == 404:
+                    logger.info("Bailing from %s %s - 404", url, params)
                     return
                 elif resp.status_code == 429 and 'x-ratelimit-reset' in resp.headers:
                     logger.debug("429 on %s %s. Waiting until ratelimit reset", url, params)
