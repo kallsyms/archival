@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twitter-archival
+  labels:
+    app: twitter-archival
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: twitter-archival
+  template:
+    metadata:
+      labels:
+        app: twitter-archival
+    spec:
+      containers:
+        - name: twitter-archival
+          image: kallsyms/twitter-archival:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: twitter-archival
+          resources:
+            requests:
+              cpu: 100m
+              memory: "256M"
