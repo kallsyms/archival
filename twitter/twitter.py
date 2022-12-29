@@ -17,6 +17,7 @@ S3_REGION = os.environ['S3_REGION']
 S3_ENDPOINT = os.environ['S3_ENDPOINT']
 S3_ACCESS_KEY = os.environ['S3_ACCESS_KEY']
 S3_SECRET_KEY = os.environ['S3_SECRET_KEY']
+STATUS_PUSH_URL = os.environ['STATUS_PUSH_URL']
 
 TWITTER_TOKEN = os.environ['TWITTER_TOKEN']
 FILE_CHUNK_SIZE = int(os.environ['FILE_CHUNK_SIZE'])
@@ -37,11 +38,12 @@ def batcher(q):
             logging.info("Uploading %s to S3", fn)
             s3_client = boto3.client('s3', region_name=S3_REGION, endpoint_url=S3_ENDPOINT, aws_access_key_id=S3_ACCESS_KEY, aws_secret_access_key=S3_SECRET_KEY)
             s3_client.upload_file(fn, S3_BUCKET, os.path.join(S3_PREFIX, fn), ExtraArgs={'StorageClass': S3_STORAGE_CLASS})
-            os.remove(fn)
+            requests.get(STATUS_PUSH_URL, timeout=3)
         except KeyboardInterrupt:
             raise
         except Exception:
             logging.exception("Exception batching")
+        finally:
             os.remove(fn)
 
 
