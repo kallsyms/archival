@@ -8,7 +8,7 @@ import threading
 import time
 import zstandard as zstd
 
-stream_url = "https://api.twitter.com/2/tweets/sample/stream?expansions=author_id,geo.place_id&place.fields=country,full_name,geo,id,name&tweet.fields=author_id,created_at,geo,id,possibly_sensitive,withheld&user.fields=id,name,protected,username,verified"
+stream_url = "https://api.twitter.com/2/tweets/sample/stream?expansions=attachments.media_keys,author_id,geo.place_id&media.fields=media_key,type,duration_ms,url,alt_text&place.fields=country,full_name,geo,id,name&tweet.fields=attachments,author_id,created_at,geo,id,possibly_sensitive,withheld&user.fields=id,name,protected,username,verified"
 
 S3_BUCKET = os.environ['S3_BUCKET']
 S3_PREFIX = os.environ['S3_PREFIX']
