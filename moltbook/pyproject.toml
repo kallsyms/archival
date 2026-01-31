@@ -1,0 +1,11 @@
+[project]
+name = "moltbook"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx",
+    "tqdm>=4.67.2",
+    "zstandard",
+]

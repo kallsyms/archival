@@ -10,17 +10,17 @@ import zstandard as zstd
 
 stream_url = "https://api.twitter.com/2/tweets/sample/stream?expansions=attachments.media_keys,author_id,geo.place_id&media.fields=media_key,type,duration_ms,url,alt_text&place.fields=country,full_name,geo,id,name&tweet.fields=attachments,author_id,created_at,geo,id,possibly_sensitive,withheld&user.fields=id,name,protected,username,verified"
 
-S3_BUCKET = os.environ['S3_BUCKET']
-S3_PREFIX = os.environ['S3_PREFIX']
-S3_STORAGE_CLASS = os.environ['S3_STORAGE_CLASS']
-S3_REGION = os.environ['S3_REGION']
-S3_ENDPOINT = os.environ['S3_ENDPOINT']
-S3_ACCESS_KEY = os.environ['S3_ACCESS_KEY']
-S3_SECRET_KEY = os.environ['S3_SECRET_KEY']
-STATUS_PUSH_URL = os.environ['STATUS_PUSH_URL']
+# S3_BUCKET = os.environ['S3_BUCKET']
+# S3_PREFIX = os.environ['S3_PREFIX']
+# S3_STORAGE_CLASS = os.environ['S3_STORAGE_CLASS']
+# S3_REGION = os.environ['S3_REGION']
+# S3_ENDPOINT = os.environ['S3_ENDPOINT']
+# S3_ACCESS_KEY = os.environ['S3_ACCESS_KEY']
+# S3_SECRET_KEY = os.environ['S3_SECRET_KEY']
+# STATUS_PUSH_URL = os.environ['STATUS_PUSH_URL']
 
 TWITTER_TOKEN = os.environ['TWITTER_TOKEN']
-FILE_CHUNK_SIZE = int(os.environ['FILE_CHUNK_SIZE'])
+#FILE_CHUNK_SIZE = int(os.environ['FILE_CHUNK_SIZE'])
 
 def batcher(q):
     while True:
@@ -58,12 +58,14 @@ def twitter_stream(q):
                 },
                 stream=True
             )
+            print(response)
             if response.status_code == 429:
                 logging.warning("Received 429. Backing off for 10 mins")
                 time.sleep(600)
                 continue
 
             for response_line in response.iter_lines():
+                print(response_line)
                 q.put(response_line)
 
             # Connection closed gracefully, reset after a second
@@ -82,7 +84,7 @@ if __name__ == "__main__":
     q = queue.Queue()
     threads = [
         threading.Thread(target=twitter_stream, args=(q, )),
-        threading.Thread(target=batcher, args=(q, )),
+        #threading.Thread(target=batcher, args=(q, )),
     ]
     for t in threads:
         t.start()
